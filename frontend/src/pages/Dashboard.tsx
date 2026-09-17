@@ -10,11 +10,10 @@ import TaskFeed from '../components/TaskFeed'
 import UncheckedTicker from '../components/UncheckedTicker'
 import DocReader from '../components/DocReader'
 import { daysUntil } from '../lib/format'
-import { seasonMilestones } from '../config/season'
 import type { Milestone, Task } from '../types'
 
 export default function Dashboard() {
-  const { dashboard, tasks, loading } = useData()
+  const { dashboard, tasks, loading, meta } = useData()
   const [selected, setSelected] = useState<Task | null>(null)
 
   // 过滤掉已停滞 / 已完成的任务（只展示进行中的安排）
@@ -49,7 +48,7 @@ export default function Dashboard() {
   }, [activeTasks])
   const milestones = useMemo<Milestone[]>(
     () =>
-      seasonMilestones.map((m) => ({
+      (meta?.milestones || []).map((m) => ({
         id: m.id,
         name: m.name,
         date: m.date,
@@ -57,7 +56,7 @@ export default function Dashboard() {
         overdue: daysUntil(m.date) < 0,
         note: m.note
       })),
-    []
+    [meta]
   )
 
   return (

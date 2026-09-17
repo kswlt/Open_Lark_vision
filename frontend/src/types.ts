@@ -130,6 +130,7 @@ export interface TeamMeta {
   groupAliases: Record<string, string>
   robotAliases: Record<string, string | null>
   priorityLabels: Record<string, string>
+  milestones?: Array<{ id: string; name: string; date: string; note?: string }>
 }
 
 export interface DutyDay {

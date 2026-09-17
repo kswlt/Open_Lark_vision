@@ -1,5 +1,5 @@
 """
-RoboMaster Team Adam 进度管理系统 —— Flask 后端入口。
+RM CONTROL —— RoboMaster Team Dashboard Flask backend.
 
 生产运行（Win7）：
     python app.py
@@ -32,6 +32,7 @@ from config.team_config import (  # noqa: E402
     ALLOWED_GROUPS,
     ALLOWED_ROBOTS,
     GROUP_ALIASES,
+    MILESTONES,
     PRIORITY_MAP,
     ROBOT_ALIASES,
     TEAM_NAME,
@@ -447,6 +448,7 @@ def api_meta():
         "groupAliases": GROUP_ALIASES,
         "robotAliases": ROBOT_ALIASES,
         "priorityLabels": reverse,
+        "milestones": MILESTONES,
     })
 
 

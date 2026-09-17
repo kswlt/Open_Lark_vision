@@ -129,3 +129,4 @@ GROUP_ALIASES = TEAM.get("group_aliases") or {}
 ROBOT_ALIASES = TEAM.get("robot_aliases") or {}
 GROUP_PREFIXES = TEAM.get("group_prefixes") or {}
 PRIORITY_MAP = TEAM.get("priority_map") or {}
+MILESTONES = TEAM.get("milestones") or []

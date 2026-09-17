@@ -65,3 +65,19 @@ team:
     普通: normal
     不紧急不重要: normal
     低: normal
+
+  # 赛季关键节点（示例日期，请按本队实际赛程修改）
+  # 前端从 /api/meta 读取，不写死在源码里
+  milestones:
+    - id: full-build
+      name: 完整形态
+      date: 2027-01-10
+      note: 示例日期，请按本队赛程修改
+    - id: league
+      name: 联盟赛
+      date: 2027-03-20
+      note: RMUL 高校联盟赛
+    - id: regional
+      name: 区域赛
+      date: 2027-05-20
+      note: RMUC 区域赛

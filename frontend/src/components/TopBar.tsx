@@ -70,7 +70,7 @@ export default function TopBar({ scale, onScaleUp, onScaleDown }: TopBarProps) {
   const source = health?.dataSource ?? 'mock'
   const [showPromo, setShowPromo] = useState(false)
   const lastRefreshStr = formatRefreshTime(new Date(lastRefresh))
-  const teamName = meta?.teamName || 'Adam 进度管理系统'
+  const teamName = meta?.teamName || 'RM CONTROL'
 
   // URL参数自动播放宣传片：?autoplay=promo
   useEffect(() => {
