@@ -561,13 +561,13 @@ def main():
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8080"))
     # 后台定时：人脸打卡每日同步飞书（幂等；写权限未开通只记日志不影响主服务）
-    if os.environ.get("FEISHU_CHECKIN_SYNC_ENABLED", "1") == "1":
+    if os.environ.get("FEISHU_CHECKIN_SYNC_ENABLED", "0") == "1":
         import threading
 
         threading.Thread(target=_checkin_sync_loop, daemon=True).start()
         app.logger.info("checkin 每日同步飞书定时任务已启动（每天 22:00）")
     # 后台定时：飞书考勤工时每日同步到电子表格（幂等）
-    if os.environ.get("FEISHU_ATTENDANCE_SYNC_ENABLED", "1") == "1":
+    if os.environ.get("FEISHU_ATTENDANCE_SYNC_ENABLED", "0") == "1":
         import threading
 
         threading.Thread(target=_attendance_sync_loop, daemon=True).start()
