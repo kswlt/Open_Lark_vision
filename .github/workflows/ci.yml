@@ -64,6 +64,9 @@ jobs:
         env:
           DATA_SOURCE: mock
           CAMERA_ENABLED: "false"
+          AUTH_MODE: private
+          VIEWER_TOKEN: ci-viewer-token
+          ADMIN_TOKEN: ci-admin-token
           PORT: 8080
         shell: bash
         run: |
@@ -71,12 +74,16 @@ jobs:
           SERVER_PID=$!
           sleep 4
           curl -sf http://127.0.0.1:8080/api/health | tee /tmp/health.json
-          curl -sf http://127.0.0.1:8080/api/meta > /dev/null
-          curl -sf http://127.0.0.1:8080/api/tasks > /dev/null
-          curl -sf http://127.0.0.1:8080/api/dashboard > /dev/null
-          # camera 无 token 必须 401
-          CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/api/camera/status)
-          if [ "$CODE" != "401" ]; then echo "camera/status expected 401, got $CODE"; exit 1; fi
+          # viewer 模式下无 token 必须 401
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8080/api/tasks)
+          if [ "$CODE" != "401" ]; then echo "tasks expected 401, got $CODE"; exit 1; fi
+          # 带 viewer token 可访问
+          curl -sf -H "Authorization: Bearer ci-viewer-token" http://127.0.0.1:8080/api/meta > /dev/null
+          curl -sf -H "Authorization: Bearer ci-viewer-token" http://127.0.0.1:8080/api/tasks > /dev/null
+          curl -sf -H "Authorization: Bearer ci-viewer-token" http://127.0.0.1:8080/api/dashboard > /dev/null
+          # admin sync 无 token 必须 401
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://127.0.0.1:8080/api/admin/checkin/sync)
+          if [ "$CODE" != "401" ]; then echo "admin sync expected 401, got $CODE"; exit 1; fi
           kill $SERVER_PID 2>/dev/null || true
 
   docker:
