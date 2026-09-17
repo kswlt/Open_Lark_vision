@@ -22,6 +22,8 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
+      - name: npm audit (non-blocking)
+        run: npm audit --audit-level=high || echo "::warning::npm audit findings above"
       - name: Lint
         run: npm run lint
       - name: Test
@@ -50,7 +52,9 @@ jobs:
       - name: Install core dependencies
         run: pip install -r requirements.txt
       - name: Install test tooling
-        run: pip install pytest ruff
+        run: pip install pytest ruff pip-audit
+      - name: pip-audit (core deps)
+        run: pip-audit -r requirements.txt || echo "::warning::pip-audit findings above"
       - name: Ruff check
         run: ruff check app.py services config data camera_checkin.py camera_manager.py integrations tests
       - name: Pytest
@@ -85,6 +89,18 @@ jobs:
           CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://127.0.0.1:8080/api/admin/checkin/sync)
           if [ "$CODE" != "401" ]; then echo "admin sync expected 401, got $CODE"; exit 1; fi
           kill $SERVER_PID 2>/dev/null || true
+
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   docker:
     name: Docker (build + compose up + smoke)
