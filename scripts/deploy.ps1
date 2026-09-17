@@ -19,7 +19,7 @@ param(
   [Parameter(Mandatory=$true)][string]$Host,
   [Parameter(Mandatory=$true)][string]$User,
   [string]$Key = "",
-  [string]$RemoteDir = "C:\RoboMasterDashboard"
+  [Parameter(Mandatory=$true)][string]$RemoteDir
 )
 
 $root = Split-Path -Parent $PSScriptRoot

@@ -436,4 +436,13 @@ journalctl -u rm-control -f   # 看日志
 
 ## License
 
-[MIT](./LICENSE)
+This project is **source-available** (not OSI open source) under the
+**PolyForm Noncommercial License 1.0.0** — see [`LICENSE`](./LICENSE).
+
+- **个人 / 高校 / 学生 / RoboMaster 战队 / 非商业科研**：免费使用、研究、修改、分发，
+  按 PolyForm Noncommercial 1.0.0 授权。
+- **商业用途**（商业产品、SaaS、收费部署、有偿技术服务、面向客户的商业部署等）：
+  **不自动获得商业使用权**，需单独联系版权所有者取得商业授权，
+  见 [`COMMERCIAL_LICENSE.md`](./COMMERCIAL_LICENSE.md)。
+- 外部贡献需同意 [`CLA.md`](./CLA.md)，以便维护者保留双授权能力。
+- RoboMaster® / DJI® 等商标属于其权利人，见 [`NOTICE.md`](./NOTICE.md)。
