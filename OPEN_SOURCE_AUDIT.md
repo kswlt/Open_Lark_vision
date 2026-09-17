@@ -53,6 +53,11 @@
 - 单容器 multi-stage：node:22-alpine 构建前端 → python:3.12-slim 运行。
 - 默认 `DATA_SOURCE=mock` / `CAMERA_ENABLED=false` / 非 root / healthcheck。
 - compose.yaml 修复空 volumes 数组问题。
+- **本机实测（Windows + Docker Desktop）**：
+  - `docker build`：成功，前端 vite build 通过，镜像产出。
+  - `docker compose up -d`：容器启动，waitress 监听 8080。
+  - 容器内 `/api/health`：200，返回 `{"status":"ok","dataSource":"mock",...}`。
+  - 宿主通过映射端口访问：`/api/health`、`/api/tasks`、`/api/dashboard`、`/api/meta` 全部 200。
 
 ## 12. Windows
 - `scripts/setup.ps1` / `start.ps1` / `stop.ps1` 就绪。
