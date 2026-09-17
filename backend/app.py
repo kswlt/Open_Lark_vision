@@ -81,6 +81,57 @@ DIST_DIR = os.path.join(BASE_DIR, "dist")
 PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 
 
+# ---------------- 认证（路由前定义） ----------------
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "").strip()
+VIEWER_TOKEN = os.environ.get("VIEWER_TOKEN", "").strip()
+CAMERA_PUBLIC = os.environ.get("CAMERA_PUBLIC", "false").strip().lower() in ("1", "true", "yes")
+AUTH_MODE = os.environ.get("AUTH_MODE", "public").strip().lower()
+
+
+def _extract_bearer(request) -> str:
+    auth = request.headers.get("Authorization", "")
+    return auth[7:] if auth.startswith("Bearer ") else ""
+
+
+def require_admin(fn):
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not ADMIN_TOKEN:
+            return jsonify({"status": "error", "message": "管理接口未配置 ADMIN_TOKEN"}), 503
+        token = _extract_bearer(request)
+        if not token or token != ADMIN_TOKEN:
+            return jsonify({"status": "error", "message": "未授权：需要有效管理员 Token"}), 401
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+def require_viewer(fn):
+    """敏感数据接口鉴权。AUTH_MODE=public 放行；private 要求 VIEWER/ADMIN token。"""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if AUTH_MODE == "public":
+            return fn(*args, **kwargs)
+        token = _extract_bearer(request) or (request.args.get("token") or "").strip()
+        if not token:
+            return jsonify({"status": "error", "message": "需要 token"}), 401
+        if VIEWER_TOKEN and token == VIEWER_TOKEN:
+            return fn(*args, **kwargs)
+        if ADMIN_TOKEN and token == ADMIN_TOKEN:
+            return fn(*args, **kwargs)
+        return jsonify({"status": "error", "message": "未授权：无效 token"}), 403
+    return wrapper
+
+
+def require_camera(fn):
+    """摄像头接口：CAMERA_PUBLIC=true 放行；否则走 require_viewer。"""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if CAMERA_PUBLIC:
+            return fn(*args, **kwargs)
+        return require_viewer(fn)(*args, **kwargs)
+    return wrapper
+
+
 @app.get("/api/health")
 def api_health():
     h = store.health_status()
@@ -100,11 +151,13 @@ def api_health():
 
 
 @app.get("/api/tasks")
+@require_viewer
 def api_tasks():
     return jsonify(store.get_tasks())
 
 
 @app.get("/api/dashboard")
+@require_viewer
 def api_dashboard():
     tasks = store.get_tasks()
     return jsonify(
@@ -119,16 +172,19 @@ def api_dashboard():
 
 
 @app.get("/api/groups")
+@require_viewer
 def api_groups():
     return jsonify(aggregates.compute_groups(store.get_tasks()))
 
 
 @app.get("/api/robots")
+@require_viewer
 def api_robots():
     return jsonify(aggregates.compute_robots(store.get_tasks()))
 
 
 @app.get("/api/worktime/leaderboard")
+@require_viewer
 def api_worktime():
     range_key = request.args.get("range", "week")
     if range_key not in ("week", "month"):
@@ -139,6 +195,7 @@ def api_worktime():
 
 
 @app.get("/api/worktime/unchecked")
+@require_viewer
 def api_unchecked():
     from datetime import date
 
@@ -146,11 +203,13 @@ def api_unchecked():
 
 
 @app.get("/api/duty")
+@require_viewer
 def api_duty():
     return jsonify(store.get_duty())
 
 
 @app.get("/api/people")
+@require_viewer
 def api_people():
     recs = store.get_worktime_records()
     wp = aggregates.compute_worktime_people(recs)
@@ -158,68 +217,12 @@ def api_people():
 
 
 @app.get("/api/attendance/face-checkin")
+@require_viewer
 def api_face_checkin():
     """今日已通过摄像头人脸识别打卡的成员名单。"""
     from services.face_checkin import read_today_checkin
 
     return jsonify(read_today_checkin())
-
-
-# ---------------- 管理员认证（后台管理接口） ----------------
-ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "").strip()
-VIEWER_TOKEN = os.environ.get("VIEWER_TOKEN", "").strip()
-CAMERA_PUBLIC = os.environ.get("CAMERA_PUBLIC", "false").strip().lower() in ("1", "true", "yes")
-
-
-def _extract_bearer(request) -> str:
-    auth = request.headers.get("Authorization", "")
-    return auth[7:] if auth.startswith("Bearer ") else ""
-
-
-def require_admin(fn):
-    """简单 Bearer Token 认证。未配置 ADMIN_TOKEN 时管理接口直接拒绝，防止误开放。"""
-
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        if not ADMIN_TOKEN:
-            return (
-                jsonify(
-                    {
-                        "status": "error",
-                        "message": "管理接口未配置 ADMIN_TOKEN（请在 backend/.env 设置后重启）",
-                    }
-                ),
-                503,
-            )
-        token = _extract_bearer(request)
-        if not token or token != ADMIN_TOKEN:
-            return jsonify({"status": "error", "message": "未授权：需要有效管理员 Token"}), 401
-        return fn(*args, **kwargs)
-
-    return wrapper
-
-
-def require_viewer(fn):
-    """摄像头接口鉴权：CAMERA_PUBLIC=true 时放行；否则要求 VIEWER_TOKEN 或 ADMIN_TOKEN。
-
-    兼容 <img src="/api/camera/stream?token=xxx"> 的 MJPEG 流式场景，
-    同时支持 Authorization: Bearer xxx 头。
-    """
-
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        if CAMERA_PUBLIC:
-            return fn(*args, **kwargs)
-        token = _extract_bearer(request) or (request.args.get("token") or "").strip()
-        if not token:
-            return jsonify({"status": "error", "message": "摄像头接口未公开：需要 token"}), 401
-        if VIEWER_TOKEN and token == VIEWER_TOKEN:
-            return fn(*args, **kwargs)
-        if ADMIN_TOKEN and token == ADMIN_TOKEN:
-            return fn(*args, **kwargs)
-        return jsonify({"status": "error", "message": "未授权：无效 token"}), 403
-
-    return wrapper
 
 
 @app.post("/api/admin/checkin/sync")
@@ -260,7 +263,7 @@ INTERNAL_CAM = os.environ.get(
 
 
 @app.get("/api/camera/frame")
-@require_viewer
+@require_camera
 def api_camera_frame():
     """兼容接口：代理内部流服务的单帧 JPEG（实时链路已改 /api/camera/stream）。"""
     import urllib.request
@@ -279,7 +282,7 @@ def api_camera_frame():
 
 
 @app.get("/api/camera/stream")
-@require_viewer
+@require_camera
 def api_camera_stream():
     """MJPEG 实时视频流：代理内部流服务（camera_checkin 进程内存缓存，非磁盘轮询）。"""
     import urllib.request
@@ -313,7 +316,7 @@ def api_camera_stream():
 
 
 @app.get("/api/camera/status")
-@require_viewer
+@require_camera
 def api_camera_status():
     """相机服务状态 + FPS 统计（来自内部流服务指标）。"""
     import urllib.request
@@ -345,7 +348,7 @@ def api_camera_status():
 
 
 @app.get("/api/attendance/face-latest")
-@require_viewer
+@require_camera
 def api_face_latest():
     """最近一次人脸识别结果：打卡成功 / 识别到成员 / 陌生人（供前端 UI 提示）。"""
     import json as _json
